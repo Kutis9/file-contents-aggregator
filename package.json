@@ -9,33 +9,71 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onCommand:file-contents-aggregator.aggregate"
+  ],
   "main": "./out/extension.js",
+ 
   "contributes": {
     "commands": [
       {
         "command": "file-contents-aggregator.aggregate",
-        "title": "Aggregate File Contents"
+        "title": "AFC - Aggregate File Contents"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "AFC - File Contents Aggregator",
+      "properties": {
+        "fileContentsAggregator.ignoredPaths": {
+          "type": "array",
+          "default": [
+            "**/node_modules/**",
+            "**/.git/**"
+          ],
+          "description": "Glob patterns for paths to ignore"
+        },
+        "fileContentsAggregator.includeFileHeaders": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include headers with file names in the aggregated output"
+        },
+        "fileContentsAggregator.generateTreeStructure": {
+          "type": "boolean",
+          "default": false,
+          "description": "Generate a tree structure of the project at the beginning of the output"
+        },
+        "fileContentsAggregator.treeStartPath": {
+          "type": "string",
+          "default": "./",
+          "description": "The starting path for generating the tree structure (relative to workspace root)"
+        },
+        "fileContentsAggregator.aggregationStartPath": {
+          "type": "string",
+          "default": "./src",
+          "description": "The starting path for aggregating files (relative to workspace root)"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src",
+    "lint": "eslint src --ext ts",
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.93.0",
     "@types/mocha": "^10.0.7",
     "@types/node": "20.x",
-    "@typescript-eslint/eslint-plugin": "^8.3.0",
-    "@typescript-eslint/parser": "^8.3.0",
-    "eslint": "^9.9.1",
-    "typescript": "^5.5.4",
-    "@vscode/test-cli": "^0.0.10",
-    "@vscode/test-electron": "^2.4.1"
+    "@types/vscode": "^1.93.0",
+    "@typescript-eslint/eslint-plugin": "^6.9.1",
+    "@typescript-eslint/parser": "^6.9.1",
+    "@vscode/test-cli": "^0.0.4",
+    "@vscode/test-electron": "^2.3.8",
+    "eslint": "^8.52.0",
+    "typescript": "^5.2.2"
+  },
+  "dependencies": {
   }
 }
