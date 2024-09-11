@@ -14,8 +14,8 @@
   "contributes": {
     "commands": [
       {
-        "command": "file-contents-aggregator.helloWorld",
-        "title": "Hello World"
+        "command": "file-contents-aggregator.aggregate",
+        "title": "Aggregate File Contents"
       }
     ]
   },
