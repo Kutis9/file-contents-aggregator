@@ -145,25 +145,22 @@ async function getPathCompletions(rootPath: string, currentInput: string): Promi
   }
 
   const fullPath = path.join(rootPath, currentInput);
-  let dir = path.dirname(fullPath);
-
-  // If the current input ends with '/', we want to show contents of that directory
-  if (currentInput.endsWith('/')) {
-      dir = fullPath;
-  }
+  let dir = path.join(rootPath, 'src');
 
   try {
       const files = await vscode.workspace.fs.readDirectory(vscode.Uri.file(dir));
       const completions = files
-          .filter(([name, type]) => type === vscode.FileType.Directory)
-          .map(([name]) => {
+          .map(([name, type]) => {
               let relativePath = path.join(path.relative(rootPath, dir), name);
               // Ensure the path starts with './'
               if (!relativePath.startsWith('./')) {
                   relativePath = './' + relativePath;
               }
               // Add trailing slash to indicate it's a directory
-              return relativePath + '/';
+              if (type === vscode.FileType.Directory) {
+                  relativePath += '/';
+              }
+              return relativePath;
           })
           .filter(relativePath => relativePath.toLowerCase().startsWith(currentInput.toLowerCase()));
 
