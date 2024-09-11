@@ -8,6 +8,7 @@ interface AggregatorConfig {
     generateTreeStructure: boolean;
     treeStartPath: string;
     aggregationStartPath: string;
+    fileExtensions: string[];
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -26,14 +27,19 @@ async function aggregate(customStartPath?: string) {
         return;
     }
 
-    const rootPath = workspaceFolders[0].uri.fsPath;
-    const outputPath = path.join(rootPath, 'aggregated_contents.txt');
+    let config = getConfiguration();
+    
+    // Interactive options
+    config = await getInteractiveOptions(config, customStartPath);
+    if (!config) return; // User cancelled
+
+    const rootPath = await selectWorkspaceFolder(workspaceFolders);
+    if (!rootPath) return; // User cancelled
+
+    const outputPath = await selectOutputFile(rootPath);
+    if (!outputPath) return; // User cancelled
 
     try {
-        const config = getConfiguration();
-        if (customStartPath) {
-            config.aggregationStartPath = path.relative(rootPath, customStartPath);
-        }
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
             title: "Aggregating file contents",
@@ -62,45 +68,119 @@ function getConfiguration(): AggregatorConfig {
         includeFileHeaders: config.get('includeFileHeaders', true),
         generateTreeStructure: config.get('generateTreeStructure', false),
         treeStartPath: config.get('treeStartPath', './'),
-        aggregationStartPath: config.get('aggregationStartPath', './src')
+        aggregationStartPath: config.get('aggregationStartPath', './src'),
+        fileExtensions: config.get('fileExtensions', [])
     };
+}
+
+async function getInteractiveOptions(config: AggregatorConfig, customStartPath?: string): Promise<AggregatorConfig | undefined> {
+    const options: vscode.QuickPickItem[] = [
+        { label: 'Include file headers', picked: config.includeFileHeaders },
+        { label: 'Generate tree structure', picked: config.generateTreeStructure },
+        { label: 'Specify file extensions to include' }
+    ];
+
+    const selectedOptions = await vscode.window.showQuickPick(options, {
+        canPickMany: true,
+        placeHolder: 'Select options for aggregation'
+    });
+
+    if (!selectedOptions) return undefined; // User cancelled
+
+    config.includeFileHeaders = selectedOptions.some(option => option.label === 'Include file headers');
+    config.generateTreeStructure = selectedOptions.some(option => option.label === 'Generate tree structure');
+
+    if (selectedOptions.some(option => option.label === 'Specify file extensions to include')) {
+        const extensions = await vscode.window.showInputBox({
+            prompt: 'Enter file extensions to include (comma-separated, e.g., js,ts,py)',
+            value: config.fileExtensions.join(',')
+        });
+        if (extensions !== undefined) {
+            config.fileExtensions = extensions.split(',').map(ext => ext.trim()).filter(ext => ext !== '');
+        }
+    }
+
+    if (customStartPath) {
+        config.aggregationStartPath = customStartPath;
+    } else {
+        const startPath = await vscode.window.showInputBox({
+            prompt: 'Enter the starting path for aggregation (relative to workspace root)',
+            value: config.aggregationStartPath
+        });
+        if (startPath !== undefined) {
+            config.aggregationStartPath = startPath;
+        }
+    }
+
+    return config;
+}
+
+async function selectWorkspaceFolder(workspaceFolders: readonly vscode.WorkspaceFolder[]): Promise<string | undefined> {
+    if (workspaceFolders.length === 1) {
+        return workspaceFolders[0].uri.fsPath;
+    }
+
+    const selected = await vscode.window.showQuickPick(
+        workspaceFolders.map(folder => ({ label: folder.name, description: folder.uri.fsPath })),
+        { placeHolder: 'Select workspace folder' }
+    );
+
+    return selected ? selected.description : undefined;
+}
+
+async function selectOutputFile(rootPath: string): Promise<string | undefined> {
+    const defaultUri = vscode.Uri.file(path.join(rootPath, 'aggregated_contents.txt'));
+    const options: vscode.SaveDialogOptions = {
+        defaultUri: defaultUri,
+        filters: {
+            'Text files': ['txt'],
+            'All files': ['*']
+        }
+    };
+
+    const uri = await vscode.window.showSaveDialog(options);
+    return uri ? uri.fsPath : undefined;
 }
 
 async function aggregateContents(rootPath: string, config: AggregatorConfig, progress: vscode.Progress<{ message?: string; increment?: number }>, token: vscode.CancellationToken): Promise<string> {
     let contents = '';
     const aggregationStartPath = path.join(rootPath, config.aggregationStartPath);
-    const aggregationFiles = await getFiles(aggregationStartPath, config.ignoredPaths);
+    const aggregationFiles = await getFiles(aggregationStartPath, config.ignoredPaths, config.fileExtensions);
 
     if (config.generateTreeStructure) {
         const treeStartPath = path.join(rootPath, config.treeStartPath);
-        const treeFiles = await getFiles(treeStartPath, config.ignoredPaths);
+        const treeFiles = await getFiles(treeStartPath, config.ignoredPaths, config.fileExtensions);
         contents += generateTreeStructure(treeStartPath, treeFiles) + '\n\n';
     }
 
     const totalFiles = aggregationFiles.length;
-    for (let i = 0; i < totalFiles; i++) {
+    const chunkSize = 100; // Process files in chunks to optimize performance
+    for (let i = 0; i < totalFiles; i += chunkSize) {
         if (token.isCancellationRequested) {
             return '';
         }
 
-        const file = aggregationFiles[i];
-        const relativePath = vscode.workspace.asRelativePath(file);
-        const fileContent = await vscode.workspace.fs.readFile(file);
-        
-        if (config.includeFileHeaders) {
-            contents += `\n--- ${relativePath} ---\n\n`;
-        }
-        
-        contents += fileContent.toString() + '\n\n';
+        const chunk = aggregationFiles.slice(i, i + chunkSize);
+        const chunkContents = await Promise.all(chunk.map(async (file) => {
+            const relativePath = vscode.workspace.asRelativePath(file);
+            const fileContent = await vscode.workspace.fs.readFile(file);
+            let fileString = '';
+            if (config.includeFileHeaders) {
+                fileString += `\n--- ${relativePath} ---\n\n`;
+            }
+            fileString += fileContent.toString() + '\n\n';
+            return fileString;
+        }));
 
-        progress.report({ message: `Processing file ${i + 1} of ${totalFiles}`, increment: 100 / totalFiles });
+        contents += chunkContents.join('');
+        progress.report({ message: `Processing files ${i + 1} to ${Math.min(i + chunkSize, totalFiles)} of ${totalFiles}`, increment: (chunkSize / totalFiles) * 100 });
     }
 
     return contents;
 }
 
-async function getFiles(startPath: string, ignoredPaths: string[]): Promise<vscode.Uri[]> {
-    const includePattern = new vscode.RelativePattern(startPath, '**/*');
+async function getFiles(startPath: string, ignoredPaths: string[], fileExtensions: string[]): Promise<vscode.Uri[]> {
+    const includePattern = new vscode.RelativePattern(startPath, fileExtensions.length > 0 ? `**/*.{${fileExtensions.join(',')}}` : '**/*');
     const excludePattern = `{${ignoredPaths.join(',')}}`;
     
     try {

@@ -63,7 +63,12 @@
           "type": "string",
           "default": "./src",
           "description": "The starting path for aggregating files (relative to workspace root)"
-        }
+        },
+        "fileContentsAggregator.fileExtensions": {
+      "type": "array",
+      "default": [],
+      "description": "File extensions to include in aggregation (e.g., ['js', 'ts', 'py'])"
+    }
       }
     }
   },
