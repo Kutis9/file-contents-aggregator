@@ -13,27 +13,46 @@ interface AggregatorConfig {
 export function activate(context: vscode.ExtensionContext) {
     console.log('File Contents Aggregator is now active!');
 
-    let disposable = vscode.commands.registerCommand('file-contents-aggregator.aggregate', async () => {
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-        if (!workspaceFolders) {
-            vscode.window.showErrorMessage('No workspace folder open');
-            return;
+    let aggregateCommand = vscode.commands.registerCommand('file-contents-aggregator.aggregate', () => aggregate());
+    let aggregateFromContextCommand = vscode.commands.registerCommand('file-contents-aggregator.aggregateFromContext', (uri: vscode.Uri) => aggregateFromContext(uri));
+
+    context.subscriptions.push(aggregateCommand, aggregateFromContextCommand);
+}
+
+async function aggregate(customStartPath?: string) {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders) {
+        vscode.window.showErrorMessage('No workspace folder open');
+        return;
+    }
+
+    const rootPath = workspaceFolders[0].uri.fsPath;
+    const outputPath = path.join(rootPath, 'aggregated_contents.txt');
+
+    try {
+        const config = getConfiguration();
+        if (customStartPath) {
+            config.aggregationStartPath = path.relative(rootPath, customStartPath);
         }
-
-        const rootPath = workspaceFolders[0].uri.fsPath;
-        const outputPath = path.join(rootPath, 'aggregated_contents.txt');
-
-        try {
-            const config = getConfiguration();
-            const fileContents = await aggregateContents(rootPath, config);
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: "Aggregating file contents",
+            cancellable: true
+        }, async (progress, token) => {
+            const fileContents = await aggregateContents(rootPath, config, progress, token);
+            if (token.isCancellationRequested) {
+                return;
+            }
             fs.writeFileSync(outputPath, fileContents);
             vscode.window.showInformationMessage(`File contents aggregated in ${outputPath}`);
-        } catch (error) {
-            vscode.window.showErrorMessage(`Error aggregating file contents: ${error}`);
-        }
-    });
+        });
+    } catch (error) {
+        vscode.window.showErrorMessage(`Error aggregating file contents: ${error}`);
+    }
+}
 
-    context.subscriptions.push(disposable);
+async function aggregateFromContext(uri: vscode.Uri) {
+    await aggregate(uri.fsPath);
 }
 
 function getConfiguration(): AggregatorConfig {
@@ -47,7 +66,7 @@ function getConfiguration(): AggregatorConfig {
     };
 }
 
-async function aggregateContents(rootPath: string, config: AggregatorConfig): Promise<string> {
+async function aggregateContents(rootPath: string, config: AggregatorConfig, progress: vscode.Progress<{ message?: string; increment?: number }>, token: vscode.CancellationToken): Promise<string> {
     let contents = '';
     const aggregationStartPath = path.join(rootPath, config.aggregationStartPath);
     const aggregationFiles = await getFiles(aggregationStartPath, config.ignoredPaths);
@@ -58,7 +77,13 @@ async function aggregateContents(rootPath: string, config: AggregatorConfig): Pr
         contents += generateTreeStructure(treeStartPath, treeFiles) + '\n\n';
     }
 
-    for (const file of aggregationFiles) {
+    const totalFiles = aggregationFiles.length;
+    for (let i = 0; i < totalFiles; i++) {
+        if (token.isCancellationRequested) {
+            return '';
+        }
+
+        const file = aggregationFiles[i];
         const relativePath = vscode.workspace.asRelativePath(file);
         const fileContent = await vscode.workspace.fs.readFile(file);
         
@@ -67,6 +92,8 @@ async function aggregateContents(rootPath: string, config: AggregatorConfig): Pr
         }
         
         contents += fileContent.toString() + '\n\n';
+
+        progress.report({ message: `Processing file ${i + 1} of ${totalFiles}`, increment: 100 / totalFiles });
     }
 
     return contents;

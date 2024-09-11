@@ -2,7 +2,7 @@
   "name": "file-contents-aggregator",
   "displayName": "file-contents-aggregator",
   "description": "Aggregates contents of all files in a VS Code project into a single file.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "engines": {
     "vscode": "^1.93.0"
   },
@@ -13,14 +13,26 @@
     "onCommand:file-contents-aggregator.aggregate"
   ],
   "main": "./out/extension.js",
- 
   "contributes": {
     "commands": [
       {
         "command": "file-contents-aggregator.aggregate",
         "title": "AFC - Aggregate File Contents"
+      },
+      {
+        "command": "file-contents-aggregator.aggregateFromContext",
+        "title": "AFC - Aggregate From This Folder"
       }
     ],
+    "menus": {
+      "explorer/context": [
+        {
+          "when": "explorerResourceIsFolder",
+          "command": "file-contents-aggregator.aggregateFromContext",
+          "group": "navigation"
+        }
+      ]
+    },
     "configuration": {
       "title": "AFC - File Contents Aggregator",
       "properties": {
@@ -75,5 +87,6 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
+    "vscode-ext-codicons": "^1.10.1"
   }
 }
