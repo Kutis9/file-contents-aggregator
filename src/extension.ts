@@ -27,17 +27,17 @@ async function aggregate(customStartPath?: string) {
         return;
     }
 
-    let config = getConfiguration();
+    let config: AggregatorConfig | undefined = getConfiguration();
     
     // Interactive options
     config = await getInteractiveOptions(config, customStartPath);
-    if (!config) return; // User cancelled
+    if (!config) {return;}; // User cancelled
 
     const rootPath = await selectWorkspaceFolder(workspaceFolders);
-    if (!rootPath) return; // User cancelled
+    if (!rootPath) {return;}; // User cancelled
 
     const outputPath = await selectOutputFile(rootPath);
-    if (!outputPath) return; // User cancelled
+    if (!outputPath) {return;}; // User cancelled
 
     try {
         await vscode.window.withProgress({
@@ -74,45 +74,104 @@ function getConfiguration(): AggregatorConfig {
 }
 
 async function getInteractiveOptions(config: AggregatorConfig, customStartPath?: string): Promise<AggregatorConfig | undefined> {
-    const options: vscode.QuickPickItem[] = [
-        { label: 'Include file headers', picked: config.includeFileHeaders },
-        { label: 'Generate tree structure', picked: config.generateTreeStructure },
-        { label: 'Specify file extensions to include' }
-    ];
+  const options: vscode.QuickPickItem[] = [
+      { label: 'Include file headers', picked: config.includeFileHeaders },
+      { label: 'Generate tree structure', picked: config.generateTreeStructure },
+      { label: 'Specify file extensions to include' }
+  ];
 
-    const selectedOptions = await vscode.window.showQuickPick(options, {
-        canPickMany: true,
-        placeHolder: 'Select options for aggregation'
-    });
+  const selectedOptions = await vscode.window.showQuickPick(options, {
+      canPickMany: true,
+      placeHolder: 'Select options for aggregation'
+  });
 
-    if (!selectedOptions) return undefined; // User cancelled
+  if (!selectedOptions) {return undefined;} // User cancelled
 
-    config.includeFileHeaders = selectedOptions.some(option => option.label === 'Include file headers');
-    config.generateTreeStructure = selectedOptions.some(option => option.label === 'Generate tree structure');
+  config.includeFileHeaders = selectedOptions.some(option => option.label === 'Include file headers');
+  config.generateTreeStructure = selectedOptions.some(option => option.label === 'Generate tree structure');
 
-    if (selectedOptions.some(option => option.label === 'Specify file extensions to include')) {
-        const extensions = await vscode.window.showInputBox({
-            prompt: 'Enter file extensions to include (comma-separated, e.g., js,ts,py)',
-            value: config.fileExtensions.join(',')
-        });
-        if (extensions !== undefined) {
-            config.fileExtensions = extensions.split(',').map(ext => ext.trim()).filter(ext => ext !== '');
-        }
-    }
+  if (selectedOptions.some(option => option.label === 'Specify file extensions to include')) {
+      const extensions = await vscode.window.showInputBox({
+          prompt: 'Enter file extensions to include (comma-separated, e.g., js,ts,py)',
+          value: config.fileExtensions.join(',')
+      });
+      if (extensions !== undefined) {
+          config.fileExtensions = extensions.split(',').map(ext => ext.trim()).filter(ext => ext !== '');
+      }
+  }
 
-    if (customStartPath) {
-        config.aggregationStartPath = customStartPath;
-    } else {
-        const startPath = await vscode.window.showInputBox({
-            prompt: 'Enter the starting path for aggregation (relative to workspace root)',
-            value: config.aggregationStartPath
-        });
-        if (startPath !== undefined) {
-            config.aggregationStartPath = startPath;
-        }
-    }
+  if (customStartPath) {
+      config.aggregationStartPath = customStartPath;
+  } else {
+      config.aggregationStartPath = await getAggregationPath(config.aggregationStartPath);
+  }
 
-    return config;
+  return config;
+}
+
+async function getAggregationPath(defaultPath: string): Promise<string> {
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+  if (!workspaceFolders) {
+      return defaultPath;
+  }
+
+  const rootPath = workspaceFolders[0].uri.fsPath;
+
+  return new Promise((resolve) => {
+      const quickPick = vscode.window.createQuickPick();
+      quickPick.placeholder = 'Enter the starting path for aggregation (relative to workspace root)';
+      quickPick.value = defaultPath;
+      quickPick.items = [{ label: defaultPath }];
+
+      quickPick.onDidChangeValue(async (value) => {
+          const completions = await getPathCompletions(rootPath, value);
+          quickPick.items = completions.map(completion => ({ label: completion }));
+      });
+
+      quickPick.onDidAccept(() => {
+          const selectedPath = quickPick.selectedItems[0]?.label || quickPick.value;
+          resolve(selectedPath);
+          quickPick.hide();
+      });
+
+      quickPick.show();
+  });
+}
+
+async function getPathCompletions(rootPath: string, currentInput: string): Promise<string[]> {
+  // Ensure the input starts with './'
+  if (!currentInput.startsWith('./')) {
+      currentInput = './' + currentInput;
+  }
+
+  const fullPath = path.join(rootPath, currentInput);
+  let dir = path.dirname(fullPath);
+
+  // If the current input ends with '/', we want to show contents of that directory
+  if (currentInput.endsWith('/')) {
+      dir = fullPath;
+  }
+
+  try {
+      const files = await vscode.workspace.fs.readDirectory(vscode.Uri.file(dir));
+      const completions = files
+          .filter(([name, type]) => type === vscode.FileType.Directory)
+          .map(([name]) => {
+              let relativePath = path.join(path.relative(rootPath, dir), name);
+              // Ensure the path starts with './'
+              if (!relativePath.startsWith('./')) {
+                  relativePath = './' + relativePath;
+              }
+              // Add trailing slash to indicate it's a directory
+              return relativePath + '/';
+          })
+          .filter(relativePath => relativePath.toLowerCase().startsWith(currentInput.toLowerCase()));
+
+      return completions;
+  } catch (error) {
+      console.error('Error getting path completions:', error);
+      return [];
+  }
 }
 
 async function selectWorkspaceFolder(workspaceFolders: readonly vscode.WorkspaceFolder[]): Promise<string | undefined> {
