@@ -2,7 +2,7 @@
   "name": "file-contents-aggregator",
   "displayName": "file-contents-aggregator",
   "description": "Aggregates contents of all files in a VS Code project into a single file.",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "engines": {
     "vscode": "^1.93.0"
   },
@@ -10,14 +10,24 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:file-contents-aggregator.aggregate"
+    "onCommand:file-contents-aggregator.fullAggregate",
+    "onCommand:file-contents-aggregator.treeCreation",
+    "onCommand:file-contents-aggregator.filesToTxt"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "file-contents-aggregator.aggregate",
-        "title": "AFC - Aggregate File Contents"
+        "command": "file-contents-aggregator.fullAggregate",
+        "title": "AFC - Full Aggregation"
+      },
+      {
+        "command": "file-contents-aggregator.treeCreation",
+        "title": "AFC - Tree Creation"
+      },
+      {
+        "command": "file-contents-aggregator.filesToTxt",
+        "title": "AFC - Files to TXT"
       },
       {
         "command": "file-contents-aggregator.aggregateFromContext",
@@ -51,7 +61,7 @@
         },
         "fileContentsAggregator.generateTreeStructure": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "Generate a tree structure of the project at the beginning of the output"
         },
         "fileContentsAggregator.treeStartPath": {
@@ -65,9 +75,24 @@
           "description": "The starting path for aggregating files (relative to workspace root)"
         },
         "fileContentsAggregator.fileExtensions": {
-      "type": "array",
-      "default": [],
-      "description": "File extensions to include in aggregation (e.g., ['js', 'ts', 'py'])"
+          "type": "array",
+          "default": [],
+          "description": "File extensions to include in aggregation (e.g., ['js', 'ts', 'py'])"
+        },
+        "fileContentsAggregator.treeDepth": {
+          "type": "number",
+          "default": 0,
+          "description": "The depth from which to start generating the tree structure (0 means from the root)"
+        },
+        "fileContentsAggregator.includeMasterplan": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include masterplan.md file in the aggregation"
+        },
+        "fileContentsAggregator.includePackageJson": {
+      "type": "boolean",
+      "default": false,
+      "description": "Include package.json file in the aggregation"
     }
       }
     }
@@ -92,6 +117,6 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
-    "vscode-ext-codicons": "^1.10.1"
+    "vscode-ext-codicons": "^1.6.0"
   }
 }
