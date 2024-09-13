@@ -25,132 +25,6 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(fullAggregateCommand, treeCreationCommand, filesToTxtCommand, aggregateFromContextCommand);
 }
 
-
-// async function fullAggregate(customStartPath?: string) {
-//     const workspaceFolders = vscode.workspace.workspaceFolders;
-//     if (!workspaceFolders) {
-//         vscode.window.showErrorMessage('No workspace folder open');
-//         return;
-//     }
-
-//     let config: AggregatorConfig = getConfiguration();
-
-//     // First, gather interactive options from the user (before gathering paths)
-//     const updatedConfig = await getInteractiveOptions(config);
-//     if (!updatedConfig) { return; } // User cancelled
-//     config = updatedConfig;
-
-//     let masterplanPath: string | undefined;
-//     let packageJsonPath: string | undefined;
-
-//     // If user chose to include masterplan.md, ask for its location
-//     if (config.includeMasterplan) {
-//         masterplanPath = await vscode.window.showInputBox({
-//             prompt: 'Please provide the location of the masterplan.md file',
-//             placeHolder: './path/to/masterplan.md',
-//             value: './masterplan.md' // Default suggestion for the location
-//         });
-//         if (!masterplanPath) { return; } // User cancelled
-
-//         const masterplanFullPath = path.isAbsolute(masterplanPath) 
-//             ? masterplanPath 
-//             : path.join(workspaceFolders[0].uri.fsPath, masterplanPath);
-
-//         // Check if the masterplan.md file exists
-//         if (!fs.existsSync(masterplanFullPath)) {
-//             const userChoice = await vscode.window.showQuickPick(
-//                 ['Create File', 'Ignore', 'Cancel'],
-//                 { placeHolder: `masterplan.md not found at ${masterplanFullPath}. What would you like to do?` }
-//             );
-
-//             if (userChoice === 'Create File') {
-//                 fs.writeFileSync(masterplanFullPath, '# Masterplan\n\n'); // Creates an empty markdown file with a default header
-//                 vscode.window.showInformationMessage(`masterplan.md has been created at ${masterplanFullPath}`);
-//             } else if (userChoice === 'Ignore') {
-//                 vscode.window.showWarningMessage('Continuing without including masterplan.md.');
-//                 masterplanPath = undefined; // Reset masterplan path if ignored
-//             } else {
-//                 vscode.window.showInformationMessage('Operation cancelled.');
-//                 return; // Cancel the operation if the user chooses 'Cancel'
-//             }
-//         }
-//     }
-
-//     // Display a message before asking for the tree start path (used for generating the tree structure)
-//     if (config.generateTreeStructure) {
-//         vscode.window.showInformationMessage('Please select the start path for generating the tree structure.');
-//         const treeStartPath = await getAggregationPath(config.treeStartPath, 'Please select the start path for generating the tree structure.');
-//         if (!treeStartPath) { return; } // User cancelled
-//         config.treeStartPath = treeStartPath;
-//     }
-
-//     if (config.includePackageJson) {
-//         packageJsonPath = path.join(workspaceFolders[0].uri.fsPath, 'package.json');
-//         if (!fs.existsSync(packageJsonPath)) {
-//             vscode.window.showWarningMessage('package.json not found in the workspace root. It will not be included in the aggregation.');
-//             packageJsonPath = undefined;
-//         }
-//     }
-
-//     // Display a message before asking for the aggregation start path (used for file content aggregation)
-//     vscode.window.showInformationMessage('Please select the start path for file content aggregation.');
-//     const aggregationStartPath = await getAggregationPath(config.aggregationStartPath, 'Please select the start path for file content aggregation.');
-//     if (!aggregationStartPath) { return; } // User cancelled
-//     config.aggregationStartPath = aggregationStartPath;
-
-//     const rootPath = await selectWorkspaceFolder(workspaceFolders);
-//     if (!rootPath) { return; } // User cancelled
-
-//     const outputPath = await selectOutputFile(rootPath, "aggregated_Full.txt");
-//     if (!outputPath) { return; } // User cancelled
-
-//     try {
-//         await vscode.window.withProgress({
-//             location: vscode.ProgressLocation.Notification,
-//             title: "Aggregating file contents",
-//             cancellable: true
-//         }, async (progress, token) => {
-//             let fullContent = '';
-
-//             // Include masterplan.md content if the user provided its location and it exists
-//             if (masterplanPath) {
-//                 const masterplanFullPath = path.isAbsolute(masterplanPath) 
-//                     ? masterplanPath 
-//                     : path.join(rootPath, masterplanPath);
-
-//                 const masterplanContent = fs.readFileSync(masterplanFullPath, 'utf-8');
-//                 fullContent += `--- Masterplan.md ---\n\n` + masterplanContent + '\n\n';
-//                 vscode.window.showInformationMessage('Masterplan.md has been included in the aggregation.');
-//             }
-
-//             if (packageJsonPath) {
-//                 const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf-8');
-//                 fullContent += `--- package.json ---\n\n${packageJsonContent}\n\n`;
-//             }
-
-//             // Generate tree structure if the option is selected
-//             if (config.generateTreeStructure) {
-//                 progress.report({ message: "Generating tree structure", increment: 0 });
-//                 const treeStructure = await generateTreeStructure(rootPath, config);
-//                 fullContent += treeStructure + '\n\n';
-//             }
-
-//             // Then aggregate the file contents
-//             progress.report({ message: "Aggregating file contents", increment: 50 });
-//             const fileContents = await aggregateContents(rootPath, { ...config, generateTreeStructure: false }, progress, token);
-//             if (token.isCancellationRequested) {
-//                 return;
-//             }
-//             fullContent += fileContents;
-
-//             fs.writeFileSync(outputPath, fullContent);
-//             vscode.window.showInformationMessage(`Full aggregation completed in ${outputPath}`);
-//         });
-//     } catch (error) {
-//         vscode.window.showErrorMessage(`Error during full aggregation: ${error}`);
-//     }
-// }
-
 async function fullAggregate(customStartPath?: string) {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders) {
@@ -366,7 +240,7 @@ async function aggregateFromContext(uri: vscode.Uri) {
     await fullAggregate(uri.fsPath);
 }
 
-function getConfiguration(): AggregatorConfig {
+export function getConfiguration(): AggregatorConfig {
     const config = vscode.workspace.getConfiguration('fileContentsAggregator');
     return {
         ignoredPaths: config.get('ignoredPaths', ['**/node_modules/**', '**/.git/**']),
@@ -547,7 +421,7 @@ async function selectOutputFile(rootPath: string, fileName: string): Promise<str
     return uri ? uri.fsPath : undefined;
 }
 
-async function aggregateContents(rootPath: string, config: AggregatorConfig, progress: vscode.Progress<{ message?: string; increment?: number }>, token: vscode.CancellationToken): Promise<string> {
+export async function aggregateContents(rootPath: string, config: AggregatorConfig, progress: vscode.Progress<{ message?: string; increment?: number }>, token: vscode.CancellationToken): Promise<string> {
     let contents = '';
     const aggregationStartPath = path.join(rootPath, config.aggregationStartPath);
     const aggregationFiles = await getFiles(aggregationStartPath, config.ignoredPaths, config.fileExtensions);
@@ -598,7 +472,7 @@ interface TreeNode {
   [key: string]: TreeNode;
 }
 
-async function generateTreeStructure(rootPath: string, config: AggregatorConfig): Promise<string> {
+export async function generateTreeStructure(rootPath: string, config: AggregatorConfig): Promise<string> {
     const treeStartPath = path.join(rootPath, config.treeStartPath);
     const files = await getFiles(treeStartPath, config.ignoredPaths, config.fileExtensions);
     

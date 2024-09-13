@@ -1,71 +1,26 @@
-# file-contents-aggregator README
+# Názov rozšírenia
 
-This is the README for your extension "file-contents-aggregator". After writing up a brief description, we recommend including the following sections.
+Toto rozšírenie slúži na [popis účelu]. Poskytuje funkcie ako:
 
-## Features
+- Funkcia 1
+- Funkcia 2
+- Funkcia 3
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+## Použitie
 
-For example if there is an image subfolder under your extension project workspace:
+Ak chcete spustiť rozšírenie, použite príkaz [príkaz] alebo postupujte podľa týchto krokov:
 
-\!\[feature X\]\(images/feature-x.png\)
+1. Krok 1
+2. Krok 2
+3. Krok 3
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+## Inštalácia
 
-## Requirements
+- Nainštalujte z [Visual Studio Marketplace](link, ak už existuje) alebo lokálne podľa krokov:
+  1. Otvorte VS Code.
+  2. Prejdite na **Rozšírenia**.
+  3. Vyberte **Install from VSIX...** a zvoľte .vsix súbor.
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+## Zmeny a aktualizácie
 
-## Extension Settings
-
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
-This extension contributes the following settings:
-
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
-
-## Known Issues
-
-Calling out known issues can help limit users opening duplicate issues against your extension.
-
-## Release Notes
-
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+- Verzia 1.0: Prvá verzia s [hlavnými funkciami].

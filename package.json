@@ -3,6 +3,11 @@
   "displayName": "file-contents-aggregator",
   "description": "Aggregates contents of all files in a VS Code project into a single file.",
   "version": "0.0.3",
+  "publisher": "kutis",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kutis9/file-contents-aggregator.git"
+  },
   "engines": {
     "vscode": "^1.93.0"
   },
@@ -90,10 +95,10 @@
           "description": "Include masterplan.md file in the aggregation"
         },
         "fileContentsAggregator.includePackageJson": {
-      "type": "boolean",
-      "default": false,
-      "description": "Include package.json file in the aggregation"
-    }
+          "type": "boolean",
+          "default": false,
+          "description": "Include package.json file in the aggregation"
+        }
       }
     }
   },
@@ -102,7 +107,7 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src --ext ts",
+    "lint": "eslint src",
     "test": "vscode-test"
   },
   "devDependencies": {
@@ -113,7 +118,8 @@
     "@typescript-eslint/parser": "^6.9.1",
     "@vscode/test-cli": "^0.0.4",
     "@vscode/test-electron": "^2.3.8",
-    "eslint": "^8.52.0",
+    "@vscode/vsce": "^3.1.0",    
+    "eslint": "^8.57.0",
     "typescript": "^5.2.2"
   },
   "dependencies": {
